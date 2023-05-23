@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: {{ .Values.application.name }}
+  name: {{ .Values.application.name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.application.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.application.name }}
+        version: {{ .Chart.Version }}
+      namespace: {{ .Values.namespace }}
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - {{ .Values.application.name }}
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+      containers:
+        {{ if .Values.endpoint.active }}
+        - image: gcr.io/endpoints-release/endpoints-runtime:1.46.0
+          name: ep
+          args: [
+              "-p", "80",
+              "-a", '127.0.0.1:{{.Values.api.port}}',
+              "-s", '{{.Values.endpoint.name}}',
+              "-R", "managed",
+              "-S", '{{.Values.endpoint.port}}'
+          ]
+          ports:
+            - containerPort: {{.Values.endpoint.port}}
+          volumeMounts:
+            - mountPath: /etc/nginx/ssl/nginx.crt
+              name: fcms-tls
+              readOnly: true
+              subPath: tls.crt
+            - mountPath: /etc/nginx/ssl/nginx.key
+              name: fcms-tls
+              readOnly: true
+              subPath: tls.key
+        {{ end }}
+        - name: {{ .Values.application.name }}
+          image: '{{ .Values.docker.image }}:{{ .Values.docker.version }}'
+          env:
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: API_PORT
+              value: {{ .Values.api.port | quote }}
+            - name: APP_VERSION
+              value: {{ .Values.docker.version | quote }}
+            {{- range .Values.environments }}
+            - name: {{ .key }}
+              value: "{{ .value }}"
+            {{- end }}
+            {{- range .Values.secrets }}
+            - name: {{ .environmentName }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.application.nameWithRelease }}
+                  key: {{ .dataName }}
+            {{- end }}
+          resources:
+            requests:
+              cpu: {{ .Values.api.cpu.min }}
+              memory: {{ .Values.api.memory.min }}
+            limits:
+              cpu: {{ .Values.api.cpu.max }}
+              memory: {{ .Values.api.memory.max }}
+          ports:
+            - name: api-port
+              containerPort: {{ .Values.api.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.api.port }}
+              scheme: HTTP
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.api.port }}
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+      volumes:
+        - name: 'fcms-tls'
+          secret:
+            secretName: {{ .Values.certificateSslGke }}
+      terminationGracePeriodSeconds: 30

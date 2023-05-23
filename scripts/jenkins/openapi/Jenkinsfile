@@ -1,0 +1,60 @@
+properties([
+    parameters([
+        string(name: 'Version', defaultValue: '', description: 'Version/branche à preciser sinon prendra le dernier commit du main'),
+        string(name: 'Environment', defaultValue: '', description: 'Environment en staging ?')
+    ]),
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+])
+
+version = params.Version
+release = params.Environment
+def projectName = 'hr-bootapi-template'
+def repoURL = 'https://github.com/vdamery/jdria'
+def githubCredentialId = 'github_access'
+if (release == "") {
+    release = "preprod"
+}
+canGoProd = false
+node {
+
+    if (version == "") {
+        def commitHash = checkout(scm).GIT_COMMIT
+        version = commitHash.substring(0,7)
+        canGoProd = true
+    } else {
+        checkout scm: [$class: 'GitSCM',
+          userRemoteConfigs: [[url: repoURL, credentialsId: githubCredentialId]],
+          branches: [[name: version]]],poll: false
+    }
+
+    stage('Deploy openapi to staging') {
+        googleCloudBuild \
+            credentialsId: 'project-staging1',
+            source: local('.'),
+            request: file('scripts/openapi/deploy-endpoint.yaml'),
+            substitutions: [
+                _DEPLOY_ENV: 'project-staging1',
+                _RELEASE: release
+            ]
+    }
+}
+
+stage('Deploy to prod ?'){
+    if (canGoProd) {
+        input "Deploy version $version to prod ?"
+        node {
+            stage('Deploy openapi to prod') {
+                googleCloudBuild \
+                    credentialsId: 'project-carriere',
+                    source: local('.'),
+                    request: file('scripts/openapi/deploy-endpoint.yaml'),
+                    substitutions: [
+                        _DEPLOY_ENV: 'project-carriere',
+                        _WORKSPACE: 'prod'
+                    ]
+            }
+        }
+    } else {
+       println "only main/master"
+    }
+}

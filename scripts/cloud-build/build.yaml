@@ -1,0 +1,24 @@
+steps:
+  - name: golang:1.18.5
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        echo "change git config url for fcms repo"
+        git config --global url."https://$${GITHUB_TOKEN}@github.com/figarocms".insteadOf  "https://github.com/figarocms"
+        make build
+    env:
+      - "GITHUB_TOKEN=${_GITHUB_TOKEN}"
+      - "GOPROXY=https://proxy.golang.org/,direct"
+      - "GOPRIVATE=github.com/figarocms"
+  - name: gcr.io/cloud-builders/docker
+    args:
+      [
+        "build",
+        "-t",
+        "gcr.io/${_PROJECT_ID}/${_PROJECT_NAME}:${_IMAGE_VERSION}",
+        "-f",
+        "scripts/docker/Dockerfile",
+        ".",
+      ]
+images: ["gcr.io/${_PROJECT_ID}/${_PROJECT_NAME}:${_IMAGE_VERSION}"]

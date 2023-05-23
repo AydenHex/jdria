@@ -1,0 +1,23 @@
+steps:
+  - name: gcr.io/cloud-builders/kubectl
+    env:
+      - "CLOUDSDK_COMPUTE_ZONE=${_CLUSTER_ZONE}"
+      - "CLOUDSDK_CONTAINER_CLUSTER=${_CLUSTER_NAME}"
+    args:
+      [
+        "-n",
+        "${_PROJECT_NAMESPACE}",
+        "rollout",
+        "status",
+        "deployment/${_PROJECT_NAME}",
+      ]
+  - name: gcr.io/cloud-builders/kubectl
+    entrypoint: "bash"
+    env:
+      - "CLOUDSDK_COMPUTE_ZONE=${_CLUSTER_ZONE}"
+      - "CLOUDSDK_CONTAINER_CLUSTER=${_CLUSTER_NAME}"
+      - "SERVICE_NAMESPACE=${_PROJECT_NAMESPACE}"
+      - "SERVICE_NAME=${_PROJECT_NAME}"
+      - "HEALTH_URI=/health"
+    args:
+      - "./scripts/cloud-build/smoke.sh"

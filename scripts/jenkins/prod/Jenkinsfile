@@ -1,0 +1,74 @@
+properties([
+    parameters([
+        string(name: 'Version', defaultValue: '', description: 'Version du projet à preciser')
+    ]),
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+])
+
+version = params.Version
+def project = 'hr-bootapi-template'
+def projectNamespace = 'hr-bootapi-namespace'
+def repoURL = 'https://github.com/vdamery/jdria'
+
+def githubCredentialId = 'github_access'
+
+def stagingProjectName = 'hr-bootapi-template-preprod'
+def projectName = 'hr-bootapi-template-prod'
+def GKECredentials = 'project-carriere'
+def GKEProjectId = 'project-carriere'
+def StagingGKEProjectId = 'project-staging1'
+def GKEClusterName = 'cluster-carriere'
+def GKEClusterZone = 'europe-west1'
+
+node {
+        stage('Checkout Version') {
+            if (version == '') {
+                error "specify a version"
+            }
+            checkout scm: [$class: 'GitSCM',
+              userRemoteConfigs: [[url: repoURL, credentialsId: githubCredentialId]],
+              branches: [[name: version]]],poll: false
+        }
+
+        stage('Promote Image') {
+           googleCloudBuild \
+               credentialsId: GKECredentials,
+               request: file('scripts/cloud-build/promote.yaml'),
+               substitutions: [
+                   _PROJECT_ID: GKEProjectId,
+                   _STAGING_PROJECT_ID: StagingGKEProjectId,
+                   _PROJECT_NAME: projectName,
+                   _STAGING_PROJECT_NAME: stagingProjectName,
+                   _IMAGE_VERSION: version
+               ]
+        }
+
+        stage('Deploy to Prod') {
+           googleCloudBuild \
+               credentialsId: GKECredentials,
+               source: local('.'),
+               request: file('scripts/cloud-build/deploy.yaml'),
+               substitutions: [
+                    _CLUSTER_ZONE: GKEClusterZone,
+                    _CLUSTER_NAME: GKEClusterName,
+                    _VALUES_ENV: 'prod',
+                    _PROJECT_NAME: projectName,
+                    _PROJECT_NAMESPACE: projectNamespace,
+                    _PROJECT_ID: GKEProjectId,
+                    _IMAGE_VERSION: version
+               ]
+        }
+
+        stage('Wait for deploy and smoke test') {
+           googleCloudBuild \
+               credentialsId: GKECredentials,
+               source: local('.'),
+               request: file('scripts/cloud-build/smoke.yaml'),
+               substitutions: [
+                   _PROJECT_NAME: projectName,
+                   _PROJECT_NAMESPACE: projectNamespace,
+                    _CLUSTER_ZONE: GKEClusterZone,
+                    _CLUSTER_NAME: GKEClusterName
+               ]
+        }
+}

@@ -1,0 +1,5 @@
+version: 1.0.0
+name: hr-bootapi-template
+description: hr-bootapi-template
+apiVersion: v1
+appVersion: "1.0"

@@ -1,0 +1,32 @@
+version: '3.5'
+
+services:
+  hr-bootapi-template:
+    image: cosmtrek/air
+    working_dir: /app/source
+    hostname: hr-bootapi-template
+    environment:
+      - GOPRIVATE=github.com/figarocms
+      - SSH_AUTH_SOCK=/ssh-auth.sock
+    restart: unless-stopped
+    volumes:
+      - ../../:/app/source
+      - ../../../hr-go-utils/:/app/hr-go-utils
+      - ~/.ssh:/root/.ssh/
+      - $SSH_AUTH_SOCK:/ssh-auth.sock
+    entrypoint: ""
+    command:
+      - sh
+      - -c
+      - |
+        go install github.com/go-delve/delve/cmd/dlv@latest
+        git config --global url."git@github.com:figarocms".insteadOf "https://github.com/figarocms"
+        air -c ./scripts/dev/air.toml
+    ports:
+      - "8088:8088"
+      - "2345:2345"
+    dns:
+    - 1.1.1.1
+networks:
+  default:
+    name: fcms

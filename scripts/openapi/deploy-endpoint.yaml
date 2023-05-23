@@ -1,0 +1,6 @@
+steps:
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args: ['-c', 'scripts/openapi/generate-openapi-file.sh -e ${_DEPLOY_ENV} -w ${_RELEASE}']
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: ['endpoints', 'services', 'deploy', 'scripts/openapi/openapi-${_DEPLOY_ENV}-${_RELEASE}.yaml']

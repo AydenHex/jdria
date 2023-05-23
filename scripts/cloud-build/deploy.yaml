@@ -1,0 +1,33 @@
+steps:
+  - name: "gcr.io/${_PROJECT_ID}/helm:2.17.0"
+    args:
+      [
+        "upgrade",
+        "${_PROJECT_NAME}",
+        "scripts/helm/api",
+        "--install",
+        "--force",
+        "--reset-values",
+        "--namespace",
+        "${_PROJECT_NAMESPACE}",
+        "--values",
+        "scripts/helm/values.${_VALUES_ENV}.yaml",
+        "--set-string",
+        "docker.version=${_IMAGE_VERSION}",
+        "--set-string",
+        "docker.image=gcr.io/${_PROJECT_ID}/${_PROJECT_NAME}",
+        "--set-string",
+        "gcp.projectId=${_PROJECT_ID}",
+        "--set-string",
+        "application.name=${_PROJECT_NAME}",
+        "--set-string",
+        'application.nameWithRelease=${_PROJECT}-${_RELEASE}',
+        '--set-string',
+        "endpoint.name=${_PROJECT_NAME}-endpoint.endpoints.${_PROJECT_ID}.cloud.goog",
+      ]
+    env:
+      - "CLOUDSDK_COMPUTE_ZONE=${_CLUSTER_ZONE}"
+      - "CLOUDSDK_CONTAINER_CLUSTER=${_CLUSTER_NAME}"
+      - "TILLERLESS=true"
+      - "TILLER_NAMESPACE=${_PROJECT_NAMESPACE}"
+      - "HELM_TILLER_HISTORY_MAX=10"

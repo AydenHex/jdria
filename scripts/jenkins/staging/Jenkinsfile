@@ -1,0 +1,103 @@
+properties([
+    parameters([
+        string(name: 'Version', defaultValue: '', description: 'Version/branche à preciser sinon prendra le dernier commit du main'),
+        string(name: 'Environment', defaultValue: '', description: 'Environment en staging ?')
+    ]),
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+])
+
+version = params.Version
+release = params.Environment
+def project = 'hr-bootapi-template'
+def projectName = 'hr-bootapi-template'
+def projectNamespace = 'hr-bootapi-namespace'
+def repoURL = 'https://github.com/vdamery/jdria'
+def githubCredentialId = 'github_access'
+def GKECredentials = 'project-staging1'
+def GKEProjectId = 'project-staging1'
+def GKEClusterName = 'cluster-staging'
+def GKEClusterZone = 'europe-west1-d'
+
+def buildProd = projectName + '-prod'
+if (release == "") {
+    release = "preprod"
+}
+
+projectName = 'hr-bootapi-template-' + release
+canGoProd = false
+
+node {
+
+    if (version == "" || version == "main") {
+        def commitHash = checkout(scm).GIT_COMMIT
+        version = commitHash.substring(0,7)
+        canGoProd = true
+    } else {
+        checkout scm: [$class: 'GitSCM',
+          userRemoteConfigs: [[url: repoURL, credentialsId: githubCredentialId]],
+          branches: [[name: version]]],poll: false
+
+        version = sh(script: 'git rev-parse HEAD', returnStdout: true).trim().substring(0,7)
+    }
+
+    stage('Test and Build') {
+        withCredentials([string(credentialsId: 'github_token', variable: 'GITHUB_TOKEN')]) {
+            googleCloudBuild \
+                credentialsId: GKECredentials,
+                source: local('.'),
+                request: file('scripts/cloud-build/build.yaml'),
+                substitutions: [
+                    _IMAGE_VERSION: version,
+                    _PROJECT_NAME: projectName,
+                    _PROJECT_ID: GKEProjectId,
+                    _GITHUB_TOKEN: env.GITHUB_TOKEN
+                ]
+        }
+    }
+
+    stage('Deploy to Staging') {
+        googleCloudBuild \
+            credentialsId: GKECredentials,
+            source: local('.'),
+            request: file('scripts/cloud-build/deploy.yaml'),
+            substitutions: [
+                _CLUSTER_ZONE: GKEClusterZone,
+                _CLUSTER_NAME: GKEClusterName,
+                _VALUES_ENV: 'staging',
+                _PROJECT_NAME: projectName,
+                _PROJECT_NAMESPACE: projectNamespace,
+                _PROJECT: project,
+                _RELEASE: release,
+                _PROJECT_ID: GKEProjectId,
+                _IMAGE_VERSION: version
+            ]
+    }
+
+
+    stage('Wait for deploy and smoke test') {
+        googleCloudBuild \
+            credentialsId: GKECredentials,
+            source: local('.'),
+            request: file('scripts/cloud-build/smoke.yaml'),
+            substitutions: [
+                _PROJECT_NAME: projectName,
+                _PROJECT_NAMESPACE: projectNamespace,
+                _CLUSTER_ZONE: GKEClusterZone,
+                _CLUSTER_NAME: GKEClusterName
+            ]
+    }
+
+}
+
+stage('Deploy to prod ?'){
+	if (canGoProd) {
+        input "Deploy version $version to prod ?"
+        node {
+            stage('Trigger Deploy to Prod') {
+                build job: buildProd, parameters: [[$class: 'StringParameterValue', name: 'Version', value: version]], wait: false
+            }
+        }
+    } else {
+       println "only main/master"
+    }
+}

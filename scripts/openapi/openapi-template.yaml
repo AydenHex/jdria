@@ -1,0 +1,35 @@
+# [START swagger]
+swagger: "2.0"
+info:
+  description: "Cloud Endpoints API for hr-bootapi-template {_RELEASE}"
+  title: "hr-bootapi-template {_RELEASE}"
+  version: "1.0.0"
+host: "hr-bootapi-template-{_RELEASE}-endpoint.endpoints.{PROJECT_ID}.cloud.goog"
+basePath: "/"
+consumes:
+  - "application/vnd.api+json"
+produces:
+  - "application/vnd.api+json"
+  - "application/json"
+schemes:
+  - "https"
+paths:
+  # Technical paths
+  /health:
+    get:
+      description: "Return a healthcheck message."
+      operationId: "healthCheck"
+      produces:
+        - "application/json"
+      responses:
+        200:
+          description: "Healthcheck"
+          schema:
+            type: object
+      security:
+        - api_key: []
+securityDefinitions:
+  api_key:
+    type: "apiKey"
+    in: "header"
+    name: "x-api-key"

@@ -1,0 +1,47 @@
+api:
+  cpu:
+    min: 100m
+    max: 100m
+  memory:
+    min: 128Mi
+    max: 128Mi
+  minReplicas: 1
+  maxReplicas: 1
+  targetCPUUtilizationPercentage: 70
+  port: 9090
+
+sqlproxy:
+  cpu:
+    min: 100m
+    max: 100m
+  memory:
+    min: 64Mi
+    max: 64Mi
+
+endpoint:
+  active: __ACTIVATE__GOOGLE_ENDPOINT__
+  port: 443
+  cpu:
+    min: 100m
+    max: 100m
+  memory:
+    min: 64Mi
+    max: 64Mi
+
+certificateSslGke: cert-ssl-wildcard-staging-fcms-io
+
+environments:
+  - key: GIN_MODE
+    value: "release"
+  - key: DD_ENV
+    value: "staging"
+  - key: API_TRACER_ENABLED
+    value: "true"
+  - key: ENV
+    value: "staging"
+
+# Uncomment to get app secrets
+#secrets:
+#  - environmentName: SA_CREDENTIALS
+#    dataName: credentials.json
+#    secretKey: "__OVERRIDDEN_AT_DEPLOYMENT_SEE_application.nameWithRelease__"

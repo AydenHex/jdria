@@ -1,0 +1,5 @@
+GIN_MODE="release"
+DD_ENV="staging"
+API_TRACER_ENABLED="false"
+ENV="dev"
+API_PORT="8088"

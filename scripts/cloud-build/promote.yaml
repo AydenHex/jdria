@@ -1,0 +1,15 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      [
+        "pull",
+        "gcr.io/${_STAGING_PROJECT_ID}/${_STAGING_PROJECT_NAME}:${_IMAGE_VERSION}",
+      ]
+  - name: gcr.io/cloud-builders/docker
+    args:
+      [
+        "tag",
+        "gcr.io/${_STAGING_PROJECT_ID}/${_STAGING_PROJECT_NAME}:${_IMAGE_VERSION}",
+        "gcr.io/${_PROJECT_ID}/${_PROJECT_NAME}:${_IMAGE_VERSION}",
+      ]
+images: ["gcr.io/${_PROJECT_ID}/${_PROJECT_NAME}:${_IMAGE_VERSION}"]
