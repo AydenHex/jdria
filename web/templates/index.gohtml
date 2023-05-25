@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Drag and Drop File Upload</title>
+    <meta charset="UTF-8">
+    <style>
+        #content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+        #history {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .message {
+            background-color: #e0e0e0;
+            padding: 5px;
+            margin: 5px;
+            border-radius: 5px;
+        }
+
+        #prompt-wrapper {
+            width: 100%;
+            border: 1px solid red;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+<div id="content">
+    <span id="game-id">{{.Id}}</span>
+    <div id="history"></div>
+    <div id="prompt-wrapper">
+        <textarea name="prompt" rows="5" cols="33"></textarea>
+        <button id="send">Send</button>
+    </div>
+</div>
+<script>
+    const gameId = {{ .Id }};
+    console.log(gameId);
+    document.getElementById("send").addEventListener("click", () => {
+        let message = document.getElementsByName("prompt")[0].value;
+        console.log(message);
+        fetch('/send', {
+            method: 'POST',
+            body: JSON.stringify({
+                gameId: gameId,
+                message: message
+            })
+        }).then(response => {
+            if (!response.ok) {
+                throw new Error("Erreur HTTP " + response.status);
+            }
+            return response.json();
+        }).then(response => {
+            console.log(response);
+            document.getElementById("history").innerHTML += '<div class="message">' + message + '</div>';
+            document.getElementsByName("prompt")[0].value = "";
+        }).catch(error => {
+            console.error(error);
+        });
+    });
+</script>
+</body>
+</html>

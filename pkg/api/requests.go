@@ -1,5 +1,6 @@
 package api
 
-type TestRequest struct {
-	Name string `json:"name"`
+type SendRequest struct {
+	GameId  string `json:"gameId"`
+	Message string `json:"message"`
 }

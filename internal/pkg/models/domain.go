@@ -1,6 +1,11 @@
 package models
 
-type TestData struct {
-	Name      string `json:"name"`
-	Firstname string `json:"firstName"`
+type Player struct {
+	Id string `json:"id"`
+}
+
+type Game struct {
+	Id      string   `json:"id"`
+	Players []Player `json:"players"`
+	History []string `json:"history"`
 }

@@ -7,16 +7,16 @@ import (
 )
 
 type Services struct {
-	InternalBootService services.InternalBootService
+	GamerService services.GameService
 }
 
 func InitServices(config configs.Api) *Services {
 	logger.Log.Info("services loaded")
 
 	// Service interne de test
-	internalBootService := services.NewInternalBootService()
+	gameService := services.NewInternalBootService()
 
 	return &Services{
-		InternalBootService: internalBootService,
+		GamerService: gameService,
 	}
 }

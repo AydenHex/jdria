@@ -22,11 +22,12 @@ func InitializeRouter(services *services.Services) *gin.Engine {
 }
 
 func initializeRoutes(r *gin.Engine, services *services.Services) {
-	r.GET("/", handlers.Health())
 	r.GET("/health", handlers.Health())
 
-	r.POST("/test", handlers.Test(services.InternalBootService))
+	r.GET("/", handlers.Index(services.GamerService))
+	r.POST("/send", handlers.Send(services.GamerService))
 
 	r.Use(fcmsrouter.Ginzap(logger.Log, time.RFC3339, true, false))
 	r.NoRoute(handlers.NoRoute)
+	r.LoadHTMLGlob("**/templates/*")
 }
